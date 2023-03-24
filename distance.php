@@ -12,33 +12,42 @@
 // 6) start apache server and run http://localhost:80/distance.php
 
 $row = 1;
-if (($handle = fopen("Addresses.csv", "r")) !== FALSE) {
+if (($handle = fopen("sales_report.csv", "r")) !== FALSE) {
+  $fp = fopen('output.csv', 'w');
   while (($data = fgetcsv($handle)) !== FALSE) {
     // number of items in row of cvs
     $num = count($data);
     // print labels (first row of csv)
     if ($row == 1) {
-      for ($c=0; $c < $num; $c++) {
-        echo "$data[$c] "; 
-      }
+      fputcsv($fp, $data);
     }
-    // if we're not on the row of labels
+    // else we're not in the first row
     else {
       for ($c=0; $c <= $num; $c++) {
-        if ($c == 0) {
-          $distance = getDistance($data[$c], '5310 E Big Sky Ln, Anaheim, CA, 92807');
-          echo " <p> Distance between $data[$c] ------ 5310 E Big Sky Ln: </p>";
-          echo "<p>$distance</p>";
+        // if we're in the address column
+        if ($c == 12) {
+          $address_array =  explode("\n", $data[$c]); // parse address column by new line into an indexed array
+          $address_array_count = count($address_array); // number of entries in the address array
+          $address_string = $address_array[1] . " " . $address_array[2];
+          echo " <p> $address_array_count <p> ";
+          echo " <p> $address_string \n<p>";
+          $distance = getDistance($data[$c], '690-5 Yamato Rd, Boca Raton, FL 33431');
+          echo " <p> $distance </p> ";
+          // if the distance fits our criteria, output value to new CSV file
+          if ($distance < 40 && $distance > 7.5) {
+            fputcsv($fp, $data);            
+          }
         }
-      }
-    } 
+      };
+    };
     $row++;
   };
   fclose($handle);
+  fclose($fp);
 };
 
 // getDistance() 
-// args:
+// parameters:
 //    $addressFrom: nutrishop buyer location
 //    $addressTo: nutrishop store location
 //    $unit: 'km' 'm' 'miles'
