@@ -1,8 +1,8 @@
 
 <?php
-// php file to be run on local machine
+// php script to be run on local machine
 // 1) make sure folder is in /xammp/htdocs
-// 2) make sure csv file is in /xamp/htdocs
+// 2) make sure csv file is in /xammp/htdocs
 // 3) manual entry csv file ---> fopen("<relative csv path>", "r")
 // 4) manual entry second argument for getDistance(). The nutrishop address.
 // 5) manual enter conditional in 
@@ -11,34 +11,29 @@
               // if ($c == 0) <--- column of address needed from csv
 // 6) start apache server and run http://localhost:80/distance.php
 
-$row = 1;
+$row = 1; // current row
+$c = 12;  // csv address column
 if (($handle = fopen("sales_report.csv", "r")) !== FALSE) {
   $fp = fopen('output.csv', 'w');
   while (($data = fgetcsv($handle)) !== FALSE) {
-    // number of items in row of cvs
-    $num = count($data);
-    // print labels (first row of csv)
     if ($row == 1) {
       fputcsv($fp, $data);
     }
-    // else we're not in the first row
     else {
-      for ($c=0; $c <= $num; $c++) {
-        // if we're in the address column
-        if ($c == 12) {
-          $address_array =  explode("\n", $data[$c]); // parse address column by new line into an indexed array
-          $address_array_count = count($address_array); // number of entries in the address array
-          $address_string = $address_array[1] . " " . $address_array[2];
-          echo " <p> $address_array_count <p> ";
-          echo " <p> $address_string \n<p>";
-          $distance = getDistance($data[$c], '690-5 Yamato Rd, Boca Raton, FL 33431');
-          echo " <p> $distance </p> ";
-          // if the distance fits our criteria, output value to new CSV file
-          if ($distance < 40 && $distance > 7.5) {
-            fputcsv($fp, $data);            
-          }
-        }
-      };
+      $address_array =  explode("\n", $data[$c]);   // parse address column by new line into an indexed array
+      $address_array_count = count($address_array); // number of entries in the address array
+      $address_string = $address_array[1] . " " . $address_array[2] . " " . $address_array[3];
+
+      // parse address string and pass as an argument to getDistance()
+      $address_string = preg_replace('/(# \d*)\s/', "", $address_string);
+      $address_string = preg_replace('/(#\d*)/', "", $address_string);
+      $address_string = preg_replace('/(Apt)/', "", $address_string);
+      $distance = getDistance($address_string, '690-5 Yamato Rd, Boca Raton, FL 33431');
+
+      // if the distance fits our criteria, output value to new CSV file
+      if ($distance < 30 && $distance > 7.5) {
+        fputcsv($fp, $data);            
+      }
     };
     $row++;
   };
@@ -104,6 +99,6 @@ function getDistance($addressFrom, $addressTo, $unit = ''){
 <title>PHP Test</title>
 </head>
 <body>
-<?php echo '<p>Hello World</p>'; ?>
+<?php echo '<p>Working on producing a csv file in the project\'s directory</p>'; ?>
 </body>
 </html>
