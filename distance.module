@@ -1,51 +1,6 @@
 
 
 <?php
-// php script to be run on local machine
-// 1) make sure folder is in /xammp/htdocs
-// 2) make sure csv file is in /xammp/htdocs
-// 3) manual entry csv file ---> fopen("<relative csv path>", "r")
-// 4) manual entry second argument for getDistance(). The nutrishop address.
-// 5) manual enter conditional in 
-          // else
-            // for
-              // if ($c == 0) <--- column of address needed from csv
-// 6) start apache server and run http://localhost:80/distance.php
-
-function distance_find_distance($csv_file) {
-  $row = 1; // current row
-  $c = 12;  // csv address column'
-
-  if (($handle = fopen($csv_file->uri, 'r')) !== FALSE) {
-  //   echo "inside if";
-  //   $fp = fopen('output.csv', 'w');
-  //   while (($data = fgetcsv($handle)) !== FALSE) {
-  //     if ($row == 1) {
-  //       fputcsv($fp, $data);
-  //     }
-  //     else {
-  //       $address_array =  explode("\n", $data[$c]);   // parse address column by new line into an indexed array
-  //       $address_array_count = count($address_array); // number of entries in the address array
-  //       $address_string = $address_array[1] . " " . $address_array[2] . " " . $address_array[3];
-
-  //       // parse address string and pass as an argument to getDistance()
-  //       $address_string = preg_replace('/(# \d*)\s/', "", $address_string);
-  //       $address_string = preg_replace('/(#\d*)/', "", $address_string);
-  //       $address_string = preg_replace('/(Apt)/', "", $address_string);
-        
-  //       // $distance = getDistance($address_string, '690-5 Yamato Rd, Boca Raton, FL 33431');
-
-  //       // // if the distance fits our criteria, output value to new CSV file
-  //       // if ($distance < 30 && $distance > 7.5) {
-  //       //   fputcsv($fp, $data);            
-  //       // }
-  //     };
-  //     $row++;
-  //   };
-  //   fclose($handle);
-  //   fclose($fp);
- };
-};
 
 // getDistance() 
 // parameters:
