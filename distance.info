@@ -1,0 +1,5 @@
+name        = Distance
+description = Module used to find the distance between a nutrishop location & customer purchase location.
+core        = 7.x
+
+configure = admin/config/content/distance
