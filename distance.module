@@ -1,50 +1,4 @@
-
-
 <?php
-// php script to be run on local machine
-// 1) make sure folder is in /xammp/htdocs
-// 2) make sure csv file is in /xammp/htdocs
-// 3) manual entry csv file ---> fopen("<relative csv path>", "r")
-// 4) manual entry second argument for getDistance(). The nutrishop address.
-// 5) manual enter conditional in 
-          // else
-            // for
-              // if ($c == 0) <--- column of address needed from csv
-// 6) start apache server and run http://localhost:80/distance.php
-
-function distance_find_distance() {
-  $row = 1; // current row
-  $c = 12;  // csv address column'
-  echo "Inside distance_find_distance hook";
-  if (($handle = fopen("sales_report.csv", "r")) !== FALSE) {
-    $fp = fopen('output.csv', 'w');
-    while (($data = fgetcsv($handle)) !== FALSE) {
-      if ($row == 1) {
-        fputcsv($fp, $data);
-      }
-      else {
-        $address_array =  explode("\n", $data[$c]);   // parse address column by new line into an indexed array
-        $address_array_count = count($address_array); // number of entries in the address array
-        $address_string = $address_array[1] . " " . $address_array[2] . " " . $address_array[3];
-
-        // parse address string and pass as an argument to getDistance()
-        $address_string = preg_replace('/(# \d*)\s/', "", $address_string);
-        $address_string = preg_replace('/(#\d*)/', "", $address_string);
-        $address_string = preg_replace('/(Apt)/', "", $address_string);
-        
-        // $distance = getDistance($address_string, '690-5 Yamato Rd, Boca Raton, FL 33431');
-
-        // // if the distance fits our criteria, output value to new CSV file
-        // if ($distance < 30 && $distance > 7.5) {
-        //   fputcsv($fp, $data);            
-        // }
-      };
-      $row++;
-    };
-    fclose($handle);
-    fclose($fp);
-  };
-};
 
 // getDistance() 
 // parameters:
@@ -75,17 +29,17 @@ function getDistance($addressFrom, $addressTo, $unit = ''){
   }
   
   // Get latitude and longitude from the geodata
-  $latitudeFrom    = $outputFrom->results[0]->geometry->location->lat;
-  $longitudeFrom    = $outputFrom->results[0]->geometry->location->lng;
-  $latitudeTo        = $outputTo->results[0]->geometry->location->lat;
+  $latitudeFrom   = $outputFrom->results[0]->geometry->location->lat;
+  $longitudeFrom  = $outputFrom->results[0]->geometry->location->lng;
+  $latitudeTo     = $outputTo->results[0]->geometry->location->lat;
   $longitudeTo    = $outputTo->results[0]->geometry->location->lng;
   
   // Calculate distance between latitude and longitude
-  $theta    = $longitudeFrom - $longitudeTo;
+  $theta   = $longitudeFrom - $longitudeTo;
   $dist    = sin(deg2rad($latitudeFrom)) * sin(deg2rad($latitudeTo)) +  cos(deg2rad($latitudeFrom)) * cos(deg2rad($latitudeTo)) * cos(deg2rad($theta));
   $dist    = acos($dist);
   $dist    = rad2deg($dist);
-  $miles    = $dist * 60 * 1.1515;
+  $miles   = $dist * 60 * 1.1515;
   
   // Convert unit and return distance
   $unit = strtoupper($unit);
@@ -98,45 +52,110 @@ function getDistance($addressFrom, $addressTo, $unit = ''){
   }
 }
 
-/**
- * Implements hook_block_info().
- */
-// function distance_block_info() {
-//   $blocks['distance'] = array(
-//     // The name that will appear in the block list.
-//     'info' => t('Distance'),
-//     // Default setting.
-//     'cache' => DRUPAL_CACHE_PER_ROLE,
-//   );
-//   return $blocks;
-// }
-
-/**
- * Implements hook_menu().
- */
-function distance_menu() {
-  $items = array();
-
-  $items['admin/config/content/distance'] = array(
-    'title' => 'Distance',
-    'description' => 'Configuration for Distance Module',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('distance_form'),
-    'access arguments' => array('access administration pages'),
-    'type' => MENU_NORMAL_ITEM,
-  );
-
-  return $items;
+//
+function distance_menu() { 
+  $items = array(); 
+  $items['admin/reports/distance'] = array(
+    'title' => 'NSP Distance Radius Check',
+    'description' => t("Find distances between customer address & NSP store location."), 
+    'page callback' => 'drupal_get_form', 
+    'page arguments' => array('distance_form'), 
+    'access arguments' => array('access administration pages'), 
+    'type' => MENU_NORMAL_ITEM, 
+  ); 
+  return $items; 
 }
 
+function distance_form() { 
 
-function distance_form($form, &$form_state) {
+  $form = array(); 
 
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#title' => t('Submit to run distance function'),
-    '#value' => t('Submit'),
+  $form['browser'] = array(
+    '#type' => 'fieldset', 
+    '#title' => t("NSP Distance Script"), 
+    '#collapsible' => TRUE, 
+  ); 
+
+  $form['browser']['col'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Address Column'),
+    '#description' => t('In what column are the addresses in? 0 based index. (A = 0, B = 1)'),
   );
 
-  return system_settings_form($form);
+  $form['browser']['file_upload'] = array( 
+    '#type' => 'file', 
+    '#title' => t('CSV File'), 
+    '#description' => t('Select the NSP CSV file to be imported.')
+  ); 
+
+  $form['browser']['submit'] = array( 
+    '#type' => 'submit', 
+    '#value' => t('Save'), 
+  );
+  
+  
+
+  $form['#submit'][] = 'distance_form_submit';
+  $form['#validate'][] = 'distance_form_validate';
+
+    // set the form encoding type 
+  $form['#attributes']['enctype'] = "multipart/form-data"; 
+  return $form; 
 }
+
+function distance_form_validate($form, &$form_state) { 
+  $extensions = array('file_validate_extensions' => array('csv'));
+  // attempt to save the uploaded file 
+  $file = file_save_upload('file_upload', $extensions); 
+
+  // check file uploaded OK 
+  if (!$file) { 
+    form_set_error('file_upload', t('A file must be uploaded or selected from FTP updates.')); 
+  } 
+  else if($file->filemime != 'text/csv') { 
+    form_set_error('file_upload', t('The file must be of CSV type only.')); 
+  } 
+  else { 
+  // set files to form_state, to process when form is submitted 
+    $form_state['values']['file_upload'] = $file; 
+  } 
+}
+
+function distance_form_submit($form, &$form_state) {
+  $col = $form_state['values']['col'];
+  debug($col, 'User Input Column: ');
+  $filepath = $form_state['values']['file_upload']-> uri;
+  $row = 1;
+
+  if (($handle = fopen($filepath, "r")) !== FALSE) {
+    $fp = fopen('temporary://output.csv', 'w');
+    while (($data = fgetcsv($handle)) !== FALSE) {
+      
+      // watchdog executes
+      // need to create & output to new csv for download
+      if ($row == 1) {
+        fputcsv($fp, $data);
+      }
+      else {
+        $address_array =  explode("\n", $data[$col]);   // parse address column by new line into an indexed array
+        $address_array_count = count($address_array); // number of entries in the address array
+        $address_string = $address_array[1] . " " . $address_array[2] . " " . $address_array[3];
+
+        // parse address string and pass as an argument to getDistance()
+        $address_string = preg_replace('/(# \d*)\s/', "", $address_string);
+        $address_string = preg_replace('/(#\d*)/', "", $address_string);
+        $address_string = preg_replace('/(Apt)/', "", $address_string);
+
+        $distance = getDistance($address_string, '690-5 Yamato Rd, Boca Raton, FL 33431');
+
+        // if the distance fits our criteria, output value to new CSV file
+        if ($distance < 30 && $distance > 7.5) {
+          fputcsv($fp, $data);            
+        }
+      };
+      $row++;
+    };
+    fclose($handle);
+    fclose($fp);
+  };
+};
