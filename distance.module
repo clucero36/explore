@@ -52,7 +52,6 @@ function getDistance($addressFrom, $addressTo, $unit = ''){
   }
 }
 
-//
 function distance_menu() { 
   $items = array(); 
   $items['admin/reports/distance'] = array(
@@ -74,31 +73,51 @@ function distance_form() {
     '#type' => 'fieldset', 
     '#title' => t("NSP Distance Script"), 
     '#collapsible' => TRUE, 
-  ); 
+  );
+
+  $form['browser']['nspAddress'] = array(
+    '#type' => 'textfield',
+    '#title' => t('NSP Address'),
+    '#description' => t('Address of NSP storefront location.'),
+    '#required' => TRUE,
+  );
+
+  $form['browser']['innerBound'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Inner Radius'),
+    '#description' => t('Inner bound of the distance to NSP storefront.'),
+    '#required' => TRUE,
+  );
+
+  $form['browser']['outerBound'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Outer Radius'),
+    '#description' => t('Outer bound of the distance to NSP storefront.'),
+    '#required' => TRUE,
+  );
 
   $form['browser']['col'] = array(
     '#type' => 'textfield',
     '#title' => t('Address Column'),
-    '#description' => t('In what column are the addresses in? 0 based index. (A = 0, B = 1)'),
+    '#description' => t('In what column of your csv file are the addresses in? 0 based index. (A = 0, B = 1)'),
+    '#required' => TRUE,
   );
 
   $form['browser']['file_upload'] = array( 
     '#type' => 'file', 
     '#title' => t('CSV File'), 
-    '#description' => t('Select the NSP CSV file to be imported.')
+    '#description' => t('Select the NSP CSV file to be imported.'),
   ); 
 
   $form['browser']['submit'] = array( 
     '#type' => 'submit', 
-    '#value' => t('Save'), 
+    '#value' => t('Run Script'), 
   );
   
-  
-
   $form['#submit'][] = 'distance_form_submit';
   $form['#validate'][] = 'distance_form_validate';
 
-    // set the form encoding type 
+  // set the form encoding type 
   $form['#attributes']['enctype'] = "multipart/form-data"; 
   return $form; 
 }
@@ -122,15 +141,17 @@ function distance_form_validate($form, &$form_state) {
 }
 
 function distance_form_submit($form, &$form_state) {
-  $col = $form_state['values']['col'];
-  debug($col, 'User Input Column: ');
-  $filepath = $form_state['values']['file_upload']-> uri;
-  $row = 1;
+  $row            = 1;
+  $col            = $form_state['values']['col'];
+  $nspAddress     = $form_state['values']['nspAddress'];
+  $innerBound     = $form_state['values']['innerBound'];
+  $outerBound     = $form_state['values']['outerBound'];
+  $filePath       = $form_state['values']['file_upload']-> uri;
+  $outputFilePath = 'temporary://output.csv';
 
-  if (($handle = fopen($filepath, "r")) !== FALSE) {
-    $fp = fopen('temporary://output.csv', 'w');
-    while (($data = fgetcsv($handle)) !== FALSE) {
-      
+  if (($handle = fopen($filePath, "r")) !== FALSE) {
+    $fp = fopen($outputFilePath, 'w');
+    while (($data = fgetcsv($handle)) !== FALSE) {      
       // watchdog executes
       // need to create & output to new csv for download
       if ($row == 1) {
@@ -146,10 +167,10 @@ function distance_form_submit($form, &$form_state) {
         $address_string = preg_replace('/(#\d*)/', "", $address_string);
         $address_string = preg_replace('/(Apt)/', "", $address_string);
 
-        $distance = getDistance($address_string, '690-5 Yamato Rd, Boca Raton, FL 33431');
+        $distance = getDistance($address_string, $nspAddress);
 
         // if the distance fits our criteria, output value to new CSV file
-        if ($distance < 30 && $distance > 7.5) {
+        if ($distance < intval($outerBound, $base=10) && $distance > intval($innerBound, $base=10)) {
           fputcsv($fp, $data);            
         }
       };
@@ -158,4 +179,13 @@ function distance_form_submit($form, &$form_state) {
     fclose($handle);
     fclose($fp);
   };
+
+  $headers = array(
+    'Content-Type' => 'text/csv',
+    'Content-Length' => filesize($outputFilePath),
+  );
+
+  file_transfer($outputFilePath, $headers);
 };
+
+// 690-5 Yamato Rd, Boca Raton, FL 33431
