@@ -194,7 +194,6 @@ function distance_form_submit($form, &$form_state) {
   if (($handle = fopen($filePath, "r")) !== FALSE) {
     $fp = fopen($outputFilePath, 'w');
     while (($data = fgetcsv($handle)) !== FALSE) {      
-
       if ($row == 1) {
         fputcsv($fp, $data);
       }
@@ -220,7 +219,6 @@ function distance_form_submit($form, &$form_state) {
     fclose($handle);
     fclose($fp);
   };
-
   $headers = array(
     'Content-Type' => 'text/csv',
     'Content-Length' => filesize($outputFilePath),
